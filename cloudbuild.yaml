@@ -1,19 +1,19 @@
 steps:
   # 1. Build Backend Image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA', './backend']
+    args: ['build', '-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA', './backend']
 
   # 2. Push Backend Image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA']
+    args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA']
 
   # 3. Build Frontend Image (Using Production Dockerfile)
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', './frontend/Dockerfile.prod', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA', './frontend']
+    args: ['build', '-f', './frontend/Dockerfile.prod', '-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA', './frontend']
 
   # 4. Push Frontend Image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA']
+    args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA']
 
   # 5. Deploy FastAPI Backend (NemoClaw API) to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -21,11 +21,11 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'karo-backend'
+      - 'karocompliance'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
       - '--region'
-      - 'us-central1'
+      - 'europe-west1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
@@ -37,19 +37,19 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'karo-frontend'
+      - 'karocompliance-ui'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA'
       - '--region'
-      - 'us-central1'
+      - 'europe-west1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars=VITE_API_URL=https://karo-backend-xxx.a.run.app' # Note: Update with actual backend URL
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA'
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
