@@ -1,11 +1,11 @@
-import base64
-import anthropic  # type: ignore
-from anthropic import AsyncAnthropic  # type: ignore
 from openai import AsyncOpenAI  # type: ignore
 from app.config import settings  # type: ignore
 
-anthropic_client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+# NVIDIA NIM Configuration: OpenAI-Compatible client
+nim_client = AsyncOpenAI(
+    api_key=settings.NVIDIA_API_KEY,
+    base_url="https://integrate.api.nvidia.com/v1"
+)
 
 class OCRService:
     @staticmethod
@@ -23,10 +23,11 @@ class OCRService:
 
     @staticmethod
     async def extract_image_text(file_bytes: bytes) -> str:
-        """Extracts text from images using GPT-4o Vision."""
+        """Extracts text from images using NVIDIA NIM Meta Llama 3.2 11B Vision."""
+        import base64
         base64_image = base64.b64encode(file_bytes).decode('utf-8')
-        response = await openai_client.chat.completions.create(
-            model="gpt-4o",
+        response = await nim_client.chat.completions.create(
+            model="meta/llama-3.2-11b-vision-instruct",
             messages=[
                 {
                     "role": "user",
