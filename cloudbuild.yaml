@@ -1,0 +1,39 @@
+steps:
+  # 1. Build Backend Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA', './backend']
+
+  # 2. Push Backend Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA']
+
+  # 3. Build Frontend Image (Using Production Dockerfile)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', './frontend/Dockerfile.prod', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA', './frontend']
+
+  # 4. Push Frontend Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA']
+
+  # 5. Deploy FastAPI Backend (NemoClaw API) to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'karo-backend'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-secrets=DATABASE_URL=DATABASE_URL:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,REDIS_URL=REDIS_URL:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,WHATSAPP_WEBHOOK_SECRET=WHATSAPP_WEBHOOK_SECRET:latest'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

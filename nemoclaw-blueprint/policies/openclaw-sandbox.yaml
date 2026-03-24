@@ -1,0 +1,50 @@
+# nemoclaw-blueprint/policies/openclaw-sandbox.yaml
+
+filesystem:
+  writable:
+    - /sandbox
+    - /tmp
+  read_only: 
+    - /usr
+    - /lib
+    - /etc
+    - /app
+
+network:
+  # 1. LLM Inference Providers
+  - endpoints:
+      - "api.anthropic.com:443"
+      - "build.nvidia.com:443"
+      - "api.openai.com:443"
+    binaries:
+      - "/usr/local/bin/python"
+    rules:
+      - methods: ["POST"]
+        paths: ["/*"]
+
+  # 2. WhatsApp Graph API (Interakt / Meta)
+  - endpoints:
+      - "graph.facebook.com:443"
+    binaries:
+      - "/usr/local/bin/python"
+    rules:
+      - methods: ["GET", "POST"]
+        paths: ["/*"]
+
+  # 3. AWS S3 (Document Storage)
+  - endpoints:
+      - "s3.ap-south-1.amazonaws.com:443"
+    binaries:
+      - "/usr/local/bin/python"
+    rules:
+      - methods: ["GET", "PUT"]
+        paths: ["/*"]
+
+  # 4. GSTN / GSP Partner API (Masters India)
+  - endpoints:
+      - "gstnpull.mastergst.com:443"
+    binaries:
+      - "/usr/local/bin/python"
+    rules:
+      - methods: ["GET", "POST"]
+        paths: ["/*"]
