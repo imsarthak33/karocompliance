@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.orm import Session  # type: ignore
 from app.models.document import Document  # type: ignore
-from app.services import s3_service, ocr_service  # type: ignore
+from app.services import storage_service, ocr_service  # type: ignore
 from app.agents.classifier_agent import ClassifierAgent  # type: ignore
 from app.agents.extraction_agent import ExtractionAgent  # type: ignore
 from app.agents.voice_agent import VoiceAgent  # type: ignore
@@ -29,7 +29,7 @@ class NemoClawOrchestrator:
             doc.processing_status = 'processing'
             self.db.commit()
 
-            file_bytes = await s3_service.download_file(doc.s3_key)
+            file_bytes = await storage_service.download_file(doc.storage_key)
 
             # ROUTER LOGIC
             if doc.file_format == 'audio':

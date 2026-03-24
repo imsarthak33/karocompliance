@@ -11,7 +11,7 @@ from app.models.ca_firm import CAFirm
 from app.models.client import Client
 from app.models.document import Document
 from app.services.whatsapp_service import download_media
-from app.services.s3_service import upload_document
+from app.services.storage_service import upload_document
 from app.tasks.document_tasks import process_incoming_document
 
 router = APIRouter()
@@ -24,7 +24,7 @@ def verify_signature(payload: bytes, signature: str):
     
     signature_hash = signature.split("sha256=")[1]
     expected_hash = hmac.new(
-        key=WHATSAPP_WEBHOOK_SECRET.encode('utf-8'),
+        key=WHATSAPP_WEBHOOK_SECRET.encode('utf-8') if WHATSAPP_WEBHOOK_SECRET else b"",
         msg=payload,
         digestmod=hashlib.sha256
     ).hexdigest()
@@ -63,7 +63,7 @@ async def receive_whatsapp_webhook(
         # STEP 2: Parse incoming payload
         data = json.loads(raw_body)
         
-        # Extract metadata (assuming standard Meta WhatsApp structure)
+        # Extract metadata
         entry = data.get("entry", [])
         if not entry:
             return JSONResponse(content={"status": "no_entry"}, status_code=200)
@@ -74,7 +74,6 @@ async def receive_whatsapp_webhook(
             
         value = changes[0].get("value", {})
         
-        # Ignore status updates (read/delivered receipts)
         if "messages" not in value:
             return JSONResponse(content={"status": "ignored"}, status_code=200)
             
@@ -87,7 +86,6 @@ async def receive_whatsapp_webhook(
         # STEP 3: Identify the CA firm
         ca_firm = db.query(CAFirm).filter(CAFirm.whatsapp_number_assigned == destination_number_id).first()
         if not ca_firm:
-            print(f"Warning: Message received for unknown destination number {destination_number_id}")
             return JSONResponse(content={"status": "firm_not_found"}, status_code=200)
 
         # STEP 4: Identify or create the client
@@ -97,7 +95,6 @@ async def receive_whatsapp_webhook(
         ).first()
         
         if not client:
-            # Create a pending client.
             client = Client(
                 ca_firm_id=ca_firm.id,
                 client_name="Pending Onboarding",
@@ -114,7 +111,7 @@ async def receive_whatsapp_webhook(
         if existing_doc:
             return JSONResponse(content={"status": "duplicate"}, status_code=200)
 
-        # STEP 6: Download media and upload to S3
+        # STEP 6: Download media and upload to Cloud Storage
         media_id = None
         file_ext = "unknown"
         
@@ -126,31 +123,29 @@ async def receive_whatsapp_webhook(
             file_ext = "jpg"
         elif msg_type == "audio":
             media_id = message["audio"]["id"]
-            file_ext = "ogg" # WhatsApp voice notes
+            file_ext = "ogg"
             
         if media_id:
             media_bytes = await download_media(media_id)
             file_name = f"{uuid.uuid4()}.{file_ext}"
-            s3_key = await upload_document(media_bytes, file_name, folder=str(ca_firm.id))
+            storage_key = await upload_document(media_bytes, file_name, folder=str(ca_firm.id))
             
             # Create Document Record
             new_document = Document(
                 ca_firm_id=ca_firm.id,
                 client_id=client.id,
                 whatsapp_message_id=message_id,
-                s3_key=s3_key,
+                storage_key=storage_key,
                 processing_status="queued"
             )
             db.add(new_document)
             db.commit()
             db.refresh(new_document)
 
-            # STEP 7: Enqueue Celery task
             process_incoming_document.delay(str(new_document.id))
 
         return JSONResponse(content={"status": "success"}, status_code=200)
         
     except Exception as e:
-        # Crucial: Catch all to prevent 500 errors back to Meta
         print(f"Webhook Error: {str(e)}")
         return JSONResponse(content={"status": "error_handled"}, status_code=200)
