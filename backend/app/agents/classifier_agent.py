@@ -6,8 +6,11 @@ from anthropic import AsyncAnthropic  # type: ignore
 from openai import AsyncOpenAI  # type: ignore
 from app.config import settings  # type: ignore
 
-anthropic_client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+# NVIDIA NIM Configuration: OpenAI-Compatible client
+nim_client = AsyncOpenAI(
+    api_key=settings.NVIDIA_API_KEY,
+    base_url="https://integrate.api.nvidia.com/v1"
+)
 
 DocumentType = Literal[
     'purchase_invoice', 'sale_invoice', 'bank_statement', 
@@ -30,20 +33,23 @@ Return ONLY a JSON object: {{"type": "<type>", "confidence": 0.0-1.0, "reasoning
 Filename: {file_name}
 Excerpt: {excerpt}"""
 
-        response = await anthropic_client.messages.create(
-            model="claude-3-sonnet-20240229",
+        response = await nim_client.chat.completions.create(
+            model="meta/llama-3.1-405b-instruct",
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=150,
-            temperature=0,
-            messages=[{"role": "user", "content": prompt}]
+            temperature=0
         )
         
         try:
-            result = json.loads(response.content[0].text)
+            content = response.choices[0].message.content
+            # Clean up potential markdown formatting
+            content = content.replace('```json', '').replace('```', '').strip()
+            result = json.loads(content)
             parsed = ClassificationResult(**result)
             if parsed.confidence < 0.7:
                 parsed.type = 'unknown'
             return parsed
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError, Exception):
             return ClassificationResult(type='unknown', confidence=0.0, reasoning="Parsing failure")  # type: ignore
 
     @staticmethod
@@ -53,8 +59,8 @@ Excerpt: {excerpt}"""
 Classify the document into exactly one of these types: purchase_invoice, sale_invoice, bank_statement, credit_note, debit_note, purchase_register, salary_slip, unknown.
 Return ONLY a JSON object: {"type": "<type>", "confidence": 0.0-1.0, "reasoning": "<one sentence>"}"""
 
-        response = await openai_client.chat.completions.create(
-            model="gpt-4o",
+        response = await nim_client.chat.completions.create(
+            model="meta/llama-3.2-11b-vision-instruct",
             messages=[
                 {
                     "role": "user",

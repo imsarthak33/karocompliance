@@ -4,10 +4,14 @@ import pandas as pd  # type: ignore
 import io
 from typing import List, Optional
 from pydantic import BaseModel  # type: ignore
-from anthropic import AsyncAnthropic  # type: ignore
+from openai import AsyncOpenAI  # type: ignore
 from app.config import settings  # type: ignore
 
-anthropic_client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+# NVIDIA NIM Configuration: OpenAI-Compatible client
+nim_client = AsyncOpenAI(
+    api_key=settings.NVIDIA_API_KEY,
+    base_url="https://integrate.api.nvidia.com/v1"
+)
 
 class LineItem(BaseModel):
     description: Optional[str]
@@ -58,16 +62,21 @@ Note: Indian vendor names often mix Hindi and English (e.g., 'Shri Ram Traders',
         
         user_prompt = f"Document Type: {doc_type}\n\nOCR Text:\n{ocr_text}\n\nExtract and map to the JSON schema."
         
-        response = await anthropic_client.messages.create(
-            model="claude-3-sonnet-20240229",
+        response = await nim_client.chat.completions.create(
+            model="meta/llama-3.1-405b-instruct",
             max_tokens=2000,
             temperature=0,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}]
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
         )
         
         try:
-            data = json.loads(response.content[0].text.strip('```json\n'))
+            content = response.choices[0].message.content
+            # Clean up potential markdown formatting
+            content = content.replace('```json', '').replace('```', '').strip()
+            data = json.loads(content)
             invoice = InvoiceData(**data)
             
             # Validate GSTINs
@@ -84,13 +93,15 @@ Note: Indian vendor names often mix Hindi and English (e.g., 'Shri Ram Traders',
 Return ONLY a JSON array of objects with keys: date, description, debit_amount, credit_amount, balance, reference_number.
 Return null for missing float values."""
         
-        response = await anthropic_client.messages.create(
-            model="claude-3-sonnet-20240229",
+        response = await nim_client.chat.completions.create(
+            model="meta/llama-3.1-405b-instruct",
             max_tokens=4000,
             temperature=0,
             messages=[{"role": "user", "content": f"{prompt}\n\n{ocr_text}"}]
         )
-        data = json.loads(response.content[0].text.strip('```json\n'))
+        content = response.choices[0].message.content
+        content = content.replace('```json', '').replace('```', '').strip()
+        data = json.loads(content)
         return [BankTransaction(**tx) for tx in data]
 
     @classmethod
@@ -102,13 +113,15 @@ Return null for missing float values."""
 Return ONLY a JSON dictionary mapping standard keys to the exact column names found in the CSV.
 Sample data:\n{head_csv}"""
         
-        response = await anthropic_client.messages.create(
-            model="claude-3-sonnet-20240229",
+        response = await nim_client.chat.completions.create(
+            model="meta/llama-3.1-405b-instruct",
             max_tokens=300,
             temperature=0,
             messages=[{"role": "user", "content": prompt}]
         )
-        col_map = json.loads(response.content[0].text.strip('```json\n'))
+        content = response.choices[0].message.content
+        content = content.replace('```json', '').replace('```', '').strip()
+        col_map = json.loads(content)
         
         extracted = []
         for _, row in df.iterrows():

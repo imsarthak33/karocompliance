@@ -3,16 +3,16 @@ import hmac
 import hashlib
 import json
 import uuid
-from fastapi import APIRouter, Request, Header, HTTPException, Depends
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models.ca_firm import CAFirm
-from app.models.client import Client
-from app.models.document import Document
-from app.services.whatsapp_service import download_media
-from app.services.storage_service import upload_document
-from app.tasks.document_tasks import process_incoming_document
+from fastapi import APIRouter, Request, Header, HTTPException, Depends  # type: ignore
+from fastapi.responses import JSONResponse  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
+from app.database import get_db  # type: ignore
+from app.models.ca_firm import CAFirm  # type: ignore
+from app.models.client import Client  # type: ignore
+from app.models.document import Document  # type: ignore
+from app.services.whatsapp_service import download_media  # type: ignore
+from app.services.storage_service import upload_document  # type: ignore
+from app.tasks.document_tasks import process_incoming_document  # type: ignore
 
 router = APIRouter()
 WHATSAPP_WEBHOOK_SECRET = os.getenv("WHATSAPP_WEBHOOK_SECRET")

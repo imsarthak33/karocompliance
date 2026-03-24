@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # LLM Providers
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    NVIDIA_API_KEY: str = os.getenv("NVIDIA_API_KEY", "")
     
     # Storage (GCS)
     GCS_BUCKET_NAME: str = os.getenv("GCS_BUCKET_NAME", "karocompliance-docs")
