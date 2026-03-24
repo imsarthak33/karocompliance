@@ -10,10 +10,16 @@ openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 class OCRService:
     @staticmethod
     async def extract_pdf_text(file_bytes: bytes) -> str:
-        # Note: In a production environment, you would use a library like PyMuPDF 
-        # to extract text directly from the PDF stream first.
-        # For this orchestration, we provide a placeholder that triggers the classifier.
-        return "Extracted PDF Text Placeholder - Replace with PyMuPDF output in production"
+        """Extracts text from PDF bytes using PyMuPDF (fitz)."""
+        import fitz  # type: ignore
+        text = ""
+        try:
+            with fitz.open(stream=file_bytes, filetype="pdf") as doc:
+                for page in doc:
+                    text += page.get_text()
+            return text
+        except Exception as e:
+            return f"Error extracting PDF text: {str(e)}"
 
     @staticmethod
     async def extract_image_text(file_bytes: bytes) -> str:
