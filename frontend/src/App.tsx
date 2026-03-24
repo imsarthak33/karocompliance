@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { DashboardHome } from './components/dashboard/DashboardHome';
 

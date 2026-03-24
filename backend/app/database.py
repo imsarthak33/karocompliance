@@ -1,16 +1,31 @@
-import os
+"""
+Database Configuration — Production-grade SQLAlchemy with connection pooling.
+
+Strict Mandates:
+  • Connection pooling with pool_pre_ping for stale connection detection
+  • pool_recycle to prevent long-lived connections from being killed by Postgres
+"""
 from sqlalchemy import create_engine  # type: ignore
 from sqlalchemy.orm import sessionmaker, declarative_base  # type: ignore
 
-# In production, this falls back to localhost if not set in docker-compose
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://karo_user:karo_pass@localhost:5432/karocompliance")
+from app.config import settings  # type: ignore
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    echo=False,
+)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+
 def get_db():
+    """FastAPI dependency — yields a scoped DB session per request."""
     db = SessionLocal()
     try:
         yield db

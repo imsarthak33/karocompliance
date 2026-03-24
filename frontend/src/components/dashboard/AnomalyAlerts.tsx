@@ -1,8 +1,14 @@
-// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 
+interface MockAnomaly {
+  id: number;
+  title: string;
+  detail: string;
+  severity: 'red' | 'yellow';
+}
+
 export const AnomalyAlerts = () => {
-  const [anomalies, setAnomalies] = useState([]);
+  const [anomalies, setAnomalies] = useState<MockAnomaly[]>([]);
 
   useEffect(() => {
     // In a real app, this would be a fetch to /api/anomalies

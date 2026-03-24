@@ -1,24 +1,32 @@
-import React, { useMemo } from 'react'
-import { AgGridReact } from 'ag-grid-react'
-import { Shield, UserPlus, Trash2 } from 'lucide-react'
+import React, { useMemo } from 'react';
+import { AgGridReact } from 'ag-grid-react';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
+import { Shield, UserPlus, Trash2 } from 'lucide-react';
+
+interface UserRow {
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
 
 export const UserManagement = () => {
-  const rowData = [
+  const rowData: UserRow[] = [
     { name: 'John Doe', email: 'john@ca.com', role: 'Partner', status: 'Active' },
     { name: 'Jane Smith', email: 'jane@ca.com', role: 'Staff', status: 'Active' },
     { name: 'Bob Wilson', email: 'bob@ca.com', role: 'Staff', status: 'Invited' },
-  ]
+  ];
 
-  const columnDefs: any = useMemo(() => [
+  const columnDefs = useMemo<ColDef<UserRow>[]>(() => [
     { field: 'name', headerName: 'Full Name', flex: 1.5 },
     { field: 'email', headerName: 'Email Address', flex: 2 },
     { 
       field: 'role', 
       headerName: 'Role', 
       flex: 1,
-      cellRenderer: (p: any) => (
+      cellRenderer: (p: ICellRendererParams<UserRow, string>) => (
         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${p.value === 'Partner' ? 'border-purple-500 text-purple-500' : 'border-slate-600 text-slate-400'}`}>
-          {p.value.toUpperCase()}
+          {p.value?.toUpperCase()}
         </span>
       )
     },
@@ -26,7 +34,7 @@ export const UserManagement = () => {
       field: 'status', 
       headerName: 'Status', 
       flex: 1,
-      cellRenderer: (p: any) => (
+      cellRenderer: (p: ICellRendererParams<UserRow, string>) => (
         <span className={`text-xs font-medium ${p.value === 'Active' ? 'text-emerald-500' : 'text-amber-500'}`}>
           {p.value}
         </span>
@@ -42,7 +50,7 @@ export const UserManagement = () => {
         </div>
       )
     }
-  ], [])
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -65,5 +73,5 @@ export const UserManagement = () => {
         />
       </div>
     </div>
-  )
-}
+  );
+};

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Enum, ForeignKey, Float, Text  # type: ignore
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Enum, ForeignKey, Numeric, Text  # type: ignore
 from sqlalchemy.dialects.postgresql import UUID, JSONB  # type: ignore
 from app.database import Base  # type: ignore
 
@@ -20,7 +20,7 @@ class Document(Base):
     processing_status = Column(Enum('received', 'queued', 'processing', 'extracted', 'reconciled', 'failed', 'flagged', name='proc_status_enum'))
     processing_error = Column(Text)
     extracted_data = Column(JSONB)
-    confidence_score = Column(Float)
+    confidence_score = Column(Numeric(5, 4))
     requires_manual_review = Column(Boolean, default=False)
     review_reason = Column(Text)
     tax_period_month = Column(Integer)

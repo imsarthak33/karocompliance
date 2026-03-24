@@ -7,9 +7,9 @@ const api = axios.create({
 
 // Automatically inject Supabase JWT into every request
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().session?.access_token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const session = useAuthStore.getState().session;
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`;
   }
   return config;
 });

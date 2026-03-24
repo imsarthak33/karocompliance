@@ -1,18 +1,22 @@
-// @ts-nocheck
 import { create } from 'zustand';
+import type { IUser, ICAFirm, ISession } from '../types';
 
 interface AuthState {
-  user: any | null;
-  caFirm: any | null;
-  setUser: (user: any) => void;
-  setCaFirm: (caFirm: any) => void;
+  user: IUser | null;
+  session: ISession | null;
+  caFirm: ICAFirm | null;
+  setUser: (user: IUser) => void;
+  setSession: (session: ISession) => void;
+  setCaFirm: (caFirm: ICAFirm) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  caFirm: { id: 'default-ca-id' }, // Placeholder for initial load
+  session: null,
+  caFirm: null,
   setUser: (user) => set({ user }),
+  setSession: (session) => set({ session }),
   setCaFirm: (caFirm) => set({ caFirm }),
-  logout: () => set({ user: null, caFirm: null })
+  logout: () => set({ user: null, session: null, caFirm: null }),
 }));

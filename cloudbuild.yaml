@@ -29,7 +29,23 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--set-secrets=DATABASE_URL=DATABASE_URL:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,REDIS_URL=REDIS_URL:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,WHATSAPP_WEBHOOK_SECRET=WHATSAPP_WEBHOOK_SECRET:latest'
+      - '--set-secrets=DATABASE_URL=DATABASE_URL:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,REDIS_URL=REDIS_URL:latest,NVIDIA_API_KEY=NVIDIA_API_KEY:latest,WHATSAPP_WEBHOOK_SECRET=WHATSAPP_WEBHOOK_SECRET:latest,GCS_BUCKET_NAME=GCS_BUCKET_NAME:latest,STORAGE_BACKEND=STORAGE_BACKEND:latest'
+
+  # 6. Deploy React Frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'karo-frontend'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/frontend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=VITE_API_URL=https://karo-backend-xxx.a.run.app' # Note: Update with actual backend URL
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/karocompliance-repo/backend:$COMMIT_SHA'
