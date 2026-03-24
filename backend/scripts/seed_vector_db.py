@@ -24,19 +24,25 @@ if not supabase_url or not supabase_key:
     raise ValueError("Missing Supabase credentials in environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY).")
 
 supabase: Client = create_client(supabase_url, supabase_key)
-openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# NVIDIA NIM Client for embeddings
+nim_client = AsyncOpenAI(
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    base_url="https://integrate.api.nvidia.com/v1"
+)
 
 # Configuration
 PDF_DIRECTORY = Path(__file__).resolve().parent.parent / 'data' / 'gst_rules'
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
-EMBEDDING_MODEL = "text-embedding-3-small"
 
 async def get_embedding(text: str) -> list[float]:
-    """Fetch embeddings from OpenAI."""
-    response = await openai_client.embeddings.create(
-        input=text,
-        model=EMBEDDING_MODEL
+    """Fetch embeddings from NVIDIA NIM."""
+    response = await nim_client.embeddings.create(
+        input=[text],
+        model="nvidia/nv-embedqa-e5-v5",
+        encoding_format="float",
+        extra_body={"input_type": "passage"} # 'passage' for database insertion
     )
     return response.data[0].embedding
 

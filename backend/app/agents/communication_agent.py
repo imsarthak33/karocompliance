@@ -1,23 +1,19 @@
 """
-Communication Agent — WhatsApp messaging via Anthropic Claude.
-
-Strict Mandates:
-  • Sentry span tracing
-  • Explicit error logging
-  • Injection-hardened prompts
+Communication Agent — WhatsApp messaging via NVIDIA NIM (Llama 3.1).
 """
 import logging
-
-import sentry_sdk  # type: ignore
-from anthropic import AsyncAnthropic  # type: ignore
-
-from app.config import settings  # type: ignore
-from app.services import whatsapp_service  # type: ignore
+import sentry_sdk # type: ignore
+from openai import AsyncOpenAI # type: ignore
+from app.config import settings # type: ignore
+from app.services import whatsapp_service # type: ignore
 
 logger = logging.getLogger(__name__)
 
-anthropic_client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-
+# Drop-in replacement: Use NVIDIA NIM instead of Anthropic
+nim_client = AsyncOpenAI(
+    api_key=settings.NVIDIA_API_KEY,
+    base_url="https://integrate.api.nvidia.com/v1",
+)
 
 class CommunicationAgent:
     SYSTEM_PROMPT = (
@@ -33,34 +29,30 @@ class CommunicationAgent:
 
     @classmethod
     async def request_missing_document(
-        cls,
-        client_wa_number: str,
-        firm_wa_id: str,
-        missing_items: list[str],
-        deadline: str,
+        cls, client_wa_number: str, firm_wa_id: str, missing_items: list[str], deadline: str,
     ) -> str:
-        with sentry_sdk.start_span(
-            op="agent.communication", description="request_missing_document"
-        ) as span:
+        with sentry_sdk.start_span(op="agent.communication", description="request_missing_document") as span:
             span.set_data("missing_items_count", len(missing_items))
-            span.set_data("deadline", deadline)
-
+            
             try:
                 items_str = ", ".join(missing_items)
-                prompt = (
+                user_prompt = (
                     f"Write a message asking the client for these missing documents: {items_str}. "
                     f"The deadline is {deadline}. "
                     "Warn them gently about late penalty/interest if missed."
                 )
 
-                response = await anthropic_client.messages.create(
-                    model="claude-3-sonnet-20240229",
+                response = await nim_client.chat.completions.create(
+                    model="meta/llama-3.1-70b-instruct",
                     max_tokens=200,
-                    system=cls.SYSTEM_PROMPT,
-                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                    messages=[
+                        {"role": "system", "content": cls.SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
                 )
 
-                msg_text = response.content[0].text
+                msg_text = response.choices[0].message.content.strip()
                 await whatsapp_service.send_text_message(client_wa_number, msg_text, firm_wa_id)
 
                 span.set_data("message_length", len(msg_text))
@@ -74,9 +66,4 @@ class CommunicationAgent:
 
     @classmethod
     async def send_anomaly_alert_to_ca(cls, ca_firm_id: str, description: str) -> None:
-        with sentry_sdk.start_span(
-            op="agent.communication", description="anomaly_alert"
-        ) as span:
-            span.set_data("ca_firm_id", ca_firm_id)
-            # TODO: Replace with WebSocket push to connected CA dashboard
-            logger.info("Alerting CA Firm %s: %s", ca_firm_id, description)
+        logger.info("Alerting CA Firm %s: %s", ca_firm_id, description)
