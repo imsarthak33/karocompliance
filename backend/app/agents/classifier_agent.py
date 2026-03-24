@@ -12,7 +12,6 @@ import base64
 import logging
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
-
 import sentry_sdk  # type: ignore
 from pydantic import BaseModel, Field, field_validator, ConfigDict  # type: ignore
 from openai import AsyncOpenAI  # type: ignore

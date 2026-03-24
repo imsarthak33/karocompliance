@@ -1,9 +1,12 @@
 import os
 from google.cloud import storage  # type: ignore
+print("DEBUG: Importing pathlib...")
 from pathlib import Path
+print("DEBUG: Importing app.config...")
 from app.config import settings  # type: ignore
 
 # Mode Selection: Use GCS or Local
+print(f"DEBUG: STORAGE_BACKEND from settings: {settings.STORAGE_BACKEND}")
 STORAGE_BACKEND = settings.STORAGE_BACKEND
 LOCAL_STORAGE_PATH = os.getenv("LOCAL_STORAGE_PATH", "./storage")
 

@@ -13,7 +13,6 @@ import io
 import logging
 from decimal import Decimal, InvalidOperation
 from typing import List, Optional
-
 import pandas as pd  # type: ignore
 import sentry_sdk  # type: ignore
 from pydantic import BaseModel, field_validator, ConfigDict  # type: ignore
@@ -183,7 +182,7 @@ class ExtractionAgent:
                 invoice = InvoiceData(**data)
 
                 # Validate GSTINs
-                if invoice.vendor_gstin and not cls.GSTIN_REGEX.match(invoice.vendor_gstin):
+                if invoice.vendor_gstin and not cls.GSTIN_REGEX.match(str(invoice.vendor_gstin)):
                     invoice.vendor_gstin = f"UNVERIFIED:{invoice.vendor_gstin}"
 
                 span.set_data("extraction_success", True)

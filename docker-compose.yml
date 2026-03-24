@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # 1. The PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: karo_user
+      POSTGRES_PASSWORD: karo_pass
+      POSTGRES_DB: karocompliance
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. The Redis Cache (For Idempotency Locks & Celery)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # 3. The Python FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080" # Maps localhost:8000 to the container's 8080 port
+    environment:
+      - DATABASE_URL=postgresql://karo_user:karo_pass@postgres:5432/karocompliance
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      # Note: Add your NVIDIA_API_KEY in the backend/.env file so Docker picks it up!
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app # Enables hot-reloading for local development
+
+  # 4. The React Vite Frontend
+  frontend:
+    build:
+      context: ./frontend
+      # Assuming you want to test the production build locally as defined in your files
+      dockerfile: Dockerfile.prod 
+    ports:
+      - "5173:80" # Maps localhost:5173 to the Nginx container port 80
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

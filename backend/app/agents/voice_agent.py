@@ -10,7 +10,11 @@ from pydantic import BaseModel, field_validator, ConfigDict # type: ignore
 logger = logging.getLogger(__name__)
 
 # Initializes using the same GOOGLE_APPLICATION_CREDENTIALS your Storage uses
-speech_client = speech.SpeechAsyncClient()
+speech_client = None
+try:
+    speech_client = speech.SpeechAsyncClient()
+except Exception:
+    logger.warning("GCP Speech client could not be initialized (credentials missing?)")
 
 class TranscriptionResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -42,6 +46,9 @@ class VoiceAgent:
                     language_code="hi-IN", # Hindi (handles Hinglish well)
                     alternative_language_codes=["en-IN"],
                 )
+
+                if not speech_client:
+                    raise ValueError("GCP Speech client not initialized")
 
                 response = await speech_client.recognize(config=config, audio=audio)
                 

@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # Frontend
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
     
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        extra="ignore"
+    )
 
 settings = Settings()
