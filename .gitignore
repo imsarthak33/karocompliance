@@ -29,3 +29,11 @@ Thumbs.db
 # Project specific
 tmp_import_log.txt
 tmp_test_import.py
+error.txt
+error2.txt
+source.zip
+gcloud.zip
+gcloud2.zip
+gcloud_installer.exe
+google-cloud-sdk/
+.gcloudignore
