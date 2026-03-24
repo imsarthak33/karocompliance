@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "karocompliance-docs")
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
     
+    # Storage (GCS)
+    GCS_BUCKET_NAME: str = os.getenv("GCS_BUCKET_NAME", "karocompliance-docs")
+    GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+    
+    # Storage Backend Selection (s3, gcs, local)
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local")
+    
     # Messaging (WhatsApp/Meta API)
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
     WHATSAPP_ACCESS_TOKEN: str = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
