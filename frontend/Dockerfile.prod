@@ -3,6 +3,7 @@ FROM node:18-alpine as builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
+RUN npm install zustand axios @supabase/supabase-js react-router-dom ag-grid-react ag-grid-community
 COPY . .
 # Note: Ensure your CI passes the VITE_ env vars here
 RUN npx vite build
