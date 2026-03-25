@@ -73,7 +73,7 @@ async def download_file(storage_key: str) -> bytes:
             
     raise Exception(f"Invalid STORAGE_BACKEND: {STORAGE_BACKEND}")
 
-storage_service = {
+storage_utils = {
     "upload_document": upload_document,
     "generate_presigned_url": generate_presigned_url,
     "download_file": download_file

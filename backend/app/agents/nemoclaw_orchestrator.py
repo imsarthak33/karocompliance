@@ -12,7 +12,7 @@ import sentry_sdk  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.models.document import Document  # type: ignore
-from app.services import storage_service, ocr_service  # type: ignore
+from app.services import storage_service, ocr_service
 from app.agents.classifier_agent import ClassifierAgent  # type: ignore
 from app.agents.extraction_agent import ExtractionAgent  # type: ignore
 from app.agents.voice_agent import VoiceAgent  # type: ignore
@@ -48,7 +48,7 @@ class NemoClawOrchestrator:
                 doc.processing_status = "processing"
                 self.db.commit()
 
-                file_bytes = await storage_service.download_file(doc.storage_key)
+                file_bytes: bytes = await storage_service.download_file(doc.storage_key)
                 span.set_data("file_format", doc.file_format)
                 span.set_data("file_size_bytes", len(file_bytes))
 
