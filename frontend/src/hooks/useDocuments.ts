@@ -105,6 +105,10 @@ export const useDocuments = (): UseDocumentsReturn => {
         setWsStatus('open');
         reconnectAttemptRef.current = 0; // Reset on successful connection
         console.info('[NemoClaw WS] Connected');
+        // SEV-1 FIX: On reconnect, fetch history to recover any documents
+        // processed while the WebSocket was disconnected. Without this, CAs
+        // permanently lose visibility of any events that fired during the gap.
+        void fetchDocuments();
       };
 
       ws.onmessage = (event: MessageEvent) => {

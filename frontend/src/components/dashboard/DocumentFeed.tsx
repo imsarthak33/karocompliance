@@ -14,7 +14,7 @@ export const DocumentFeed = () => {
           <div key={doc.id} className="flex items-center justify-between border-b border-gray-100 p-2 text-sm">
             <span className="max-w-[150px] truncate">{doc.original_file_name || doc.document_type || 'Unknown Document'}</span>
             <span className={`rounded px-2 py-0.5 text-xs ${
-              doc.processing_status === 'processed' || doc.processing_status === 'extracted' || doc.processing_status === 'reconciled' ? 'bg-green-100 text-green-700' : 
+              doc.processing_status === 'extracted' || doc.processing_status === 'reconciled' ? 'bg-green-100 text-green-700' : 
               doc.processing_status === 'failed' || doc.processing_status === 'flagged' ? 'bg-red-100 text-red-700' : 
               'bg-blue-100 text-blue-700'
             }`}>

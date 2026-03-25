@@ -30,6 +30,13 @@ Thumbs.db
 # Project specific
 tmp_import_log.txt
 tmp_test_import.py
+backend/*.txt
+backend/*.log
+backend/.pytest_cache/
+frontend/*.txt
+frontend/*.log
+git_status.txt
+git_changes.txt
 error.txt
 error2.txt
 source.zip

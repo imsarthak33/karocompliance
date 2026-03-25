@@ -14,6 +14,7 @@ sentry-sdk[fastapi]
 supabase
 langchain
 langchain-community
+tenacity
 pymupdf
 pytest
 httpx

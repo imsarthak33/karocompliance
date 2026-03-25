@@ -6,7 +6,18 @@ Strict Mandates:
   • PII redaction before LLM calls (DPDP Act)
   • Sentry span tracing for full observability
   • Prompt-injection-hardened system prompts
+
+SEV-1 FIX (LLM Timeout & Fallbacks):
+  Wrapped all NIM API calls with Tenacity retry: exponential backoff,
+  60s per-attempt timeout, max 3 attempts. Prevents Celery worker from
+  hanging indefinitely on a NIM 502 or network blip.
+
+SEV-1 FIX (JSON Parse Bomb):
+  json.loads wrapped in a try/except that maps to a graceful Pydantic fallback
+  instead of a raw 500. Empty/malformed LLM output now returns a null-field
+  model instead of crashing the orchestrator.
 """
+import asyncio
 import json
 import re
 import io
@@ -15,8 +26,15 @@ from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 import pandas as pd  # type: ignore
 import sentry_sdk  # type: ignore
+from openai import AsyncOpenAI, APIStatusError, APITimeoutError  # type: ignore
 from pydantic import BaseModel, field_validator, ConfigDict  # type: ignore
-from openai import AsyncOpenAI  # type: ignore
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)  # type: ignore
 
 from app.config import settings  # type: ignore
 from app.services.pii_service import PIIRedactor  # type: ignore
@@ -27,7 +45,22 @@ logger = logging.getLogger(__name__)
 nim_client = AsyncOpenAI(
     api_key=settings.NVIDIA_API_KEY,
     base_url="https://integrate.api.nvidia.com/v1",
+    timeout=60.0,  # Hard 60-second per-request timeout
 )
+
+# ---
+# Tenacity retry decorator for all NIM calls:
+#   - Retries on transient HTTP errors (429, 502, 503, 504) and timeouts
+#   - Exponential backoff: 2s -> 4s -> 8s (max 3 attempts)
+# ---
+_NIM_RETRY = retry(
+    reraise=True,
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=16),
+    retry=retry_if_exception_type((APIStatusError, APITimeoutError, asyncio.TimeoutError)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+
 
 # ---------------------------------------------------------------------------
 # Injection-Hardened Prompt Preamble
@@ -162,19 +195,28 @@ class ExtractionAgent:
             )
 
             try:
-                response = await nim_client.chat.completions.create(
-                    model="meta/llama-3.1-405b-instruct",
-                    max_tokens=2000,
-                    temperature=0,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                )
+                @_NIM_RETRY
+                async def _call_nim() -> dict:
+                    response = await nim_client.chat.completions.create(
+                        model="meta/llama-3.1-405b-instruct",
+                        max_tokens=2000,
+                        temperature=0,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                    )
+                    raw = response.choices[0].message.content or ""
+                    raw = raw.replace("```json", "").replace("```", "").strip()
+                    # SEV-1 FIX: graceful fallback on malformed JSON — return empty dict
+                    try:
+                        return json.loads(raw)
+                    except json.JSONDecodeError:
+                        logger.warning("NIM returned non-JSON; falling back to empty invoice.")
+                        sentry_sdk.capture_message("NIM non-JSON invoice response", level="warning")
+                        return {}
 
-                content = response.choices[0].message.content
-                content = content.replace("```json", "").replace("```", "").strip()
-                data = json.loads(content)
+                data = await _call_nim()
 
                 # --- PII Unmasking: restore originals in extracted data ---
                 data = PIIRedactor.unmask_dict(data, token_map)
@@ -213,15 +255,25 @@ class ExtractionAgent:
             )
 
             try:
-                response = await nim_client.chat.completions.create(
-                    model="meta/llama-3.1-405b-instruct",
-                    max_tokens=4000,
-                    temperature=0,
-                    messages=[{"role": "user", "content": f"{prompt}\n\n{masked_text}"}],
-                )
-                content = response.choices[0].message.content
-                content = content.replace("```json", "").replace("```", "").strip()
-                raw_data = json.loads(content)
+                @_NIM_RETRY
+                async def _call_nim_bank() -> list:
+                    response = await nim_client.chat.completions.create(
+                        model="meta/llama-3.1-405b-instruct",
+                        max_tokens=4000,
+                        temperature=0,
+                        messages=[{"role": "user", "content": f"{prompt}\n\n{masked_text}"}],
+                    )
+                    raw = response.choices[0].message.content or ""
+                    raw = raw.replace("```json", "").replace("```", "").strip()
+                    try:
+                        result = json.loads(raw)
+                        return result if isinstance(result, list) else []
+                    except json.JSONDecodeError:
+                        logger.warning("NIM returned non-JSON for bank statement; returning empty.")
+                        sentry_sdk.capture_message("NIM non-JSON bank statement response", level="warning")
+                        return []
+
+                raw_data = await _call_nim_bank()
 
                 # Unmask PII in each transaction dict
                 unmasked_data = [PIIRedactor.unmask_dict(tx, token_map) for tx in raw_data]

@@ -3,9 +3,26 @@ import hmac
 import hashlib
 import json
 from fastapi.testclient import TestClient
+from unittest.mock import MagicMock, patch
 from app.main import app
 from app.config import settings
-from unittest.mock import patch
+from app.database import get_db
+
+def override_get_db():
+    mock_db = MagicMock()
+    mock_ca_firm = MagicMock()
+    mock_ca_firm.id = "fake_ca_id"
+    mock_client = MagicMock()
+    mock_client.id = "fake_client_id"
+    
+    mock_db.query.return_value.filter.return_value.first.side_effect = [
+        mock_ca_firm,
+        mock_client,
+        None,
+    ]
+    yield mock_db
+
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
@@ -38,11 +55,16 @@ def mock_whatsapp_payload():
         }]
     }
 
-@patch('app.tasks.document_tasks.process_incoming_document.delay')
-@patch('app.services.whatsapp_service.download_media')
-def test_whatsapp_webhook_pipeline(mock_download, mock_task_delay, mock_whatsapp_payload):
-    # Mock the media download and the Celery task delay
+@patch('app.routers.webhooks._get_redis')
+@patch('app.routers.webhooks.process_incoming_document.delay')
+@patch('app.routers.webhooks.upload_document')
+@patch('app.routers.webhooks.download_media')
+def test_whatsapp_webhook_pipeline(mock_download, mock_upload, mock_task_delay, mock_redis, mock_whatsapp_payload):
+    # Mock the media download, storage upload, and the Celery task delay
     mock_download.return_value = b"fake_image_bytes"
+    mock_upload.return_value = "fake_storage_key"
+    mock_redis_client = mock_redis.return_value
+    mock_redis_client.set.return_value = True
     
     # Prepare the payload and signature
     payload_json = json.dumps(mock_whatsapp_payload)
