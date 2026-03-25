@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 # Note: Ensure your CI passes the VITE_ env vars here
-RUN npm run build
+RUN npx vite build
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
